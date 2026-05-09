@@ -1,25 +1,25 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState, useCallback } from 'react';
-import { Employee, Service, Session, WorkLog } from '../types';
+import AsyncStorage from "./storage";
+import { useEffect, useState, useCallback } from "react";
+import { Employee, Service, Session, WorkLog } from "../types";
 
 const KEYS = {
-  employees: 'douda.employees',
-  services: 'douda.services',
-  logs: 'douda.logs',
-  session: 'douda.session',
-  adminPin: 'douda.adminPin',
+  employees: "douda.employees",
+  services: "douda.services",
+  logs: "douda.logs",
+  session: "douda.session",
+  adminPin: "douda.adminPin",
 };
 
 // ---- Defaults ----
-const DEFAULT_ADMIN_PIN = '1234'; // Owner can change later
+const DEFAULT_ADMIN_PIN = "1234"; // Owner can change later
 const DEFAULT_EMPLOYEES: Employee[] = [
-  { id: 'e1', name: 'Sample Employee', pin: '0000' },
+  { id: "e1", name: "Sample Employee", pin: "0000" },
 ];
 const DEFAULT_SERVICES: Service[] = [
-  { id: 's_gel', name: 'Gel', price: 0 },
-  { id: 's_gelish', name: 'Gelish', price: 0 },
-  { id: 's_manicure', name: 'Manicure', price: 0 },
-  { id: 's_pedicure', name: 'Pedicure', price: 0 },
+  { id: "s_gel", name: "Gel", price: 0 },
+  { id: "s_gelish", name: "Gelish", price: 0 },
+  { id: "s_manicure", name: "Manicure", price: 0 },
+  { id: "s_pedicure", name: "Pedicure", price: 0 },
 ];
 
 // ---- Generic helpers ----
@@ -69,7 +69,10 @@ export async function getEmployees(): Promise<Employee[]> {
 export async function saveEmployees(list: Employee[]) {
   await setJSON(KEYS.employees, list);
 }
-export async function addEmployee(name: string, pin: string): Promise<Employee> {
+export async function addEmployee(
+  name: string,
+  pin: string,
+): Promise<Employee> {
   const list = await getEmployees();
   const e: Employee = { id: `e_${Date.now()}`, name, pin };
   list.push(e);
@@ -92,7 +95,10 @@ export async function getServices(): Promise<Service[]> {
 export async function saveServices(list: Service[]) {
   await setJSON(KEYS.services, list);
 }
-export async function addService(name: string, price: number): Promise<Service> {
+export async function addService(
+  name: string,
+  price: number,
+): Promise<Service> {
   const list = await getServices();
   const s: Service = { id: `s_${Date.now()}`, name, price };
   list.push(s);
@@ -108,20 +114,32 @@ export async function deleteService(id: string) {
 export async function getLogs(): Promise<WorkLog[]> {
   return getJSON<WorkLog[]>(KEYS.logs, []);
 }
-export async function addLog(entry: Omit<WorkLog, 'id' | 'createdAtISO'>): Promise<WorkLog> {
+export async function addLog(
+  entry: Omit<WorkLog, "id" | "createdAtISO">,
+): Promise<WorkLog> {
   const list = await getLogs();
-  const log: WorkLog = { ...entry, id: `l_${Date.now()}`, createdAtISO: new Date().toISOString() };
+  const log: WorkLog = {
+    ...entry,
+    id: `l_${Date.now()}`,
+    createdAtISO: new Date().toISOString(),
+  };
   list.push(log);
   await setJSON(KEYS.logs, list);
   return log;
 }
 export async function deleteLog(id: string) {
   const list = await getLogs();
-  await setJSON(KEYS.logs, list.filter((l) => l.id !== id));
+  await setJSON(
+    KEYS.logs,
+    list.filter((l) => l.id !== id),
+  );
 }
 
 // ---- Convenience hook to refresh on focus ----
-export function useAsync<T>(loader: () => Promise<T>, deps: any[] = []): {
+export function useAsync<T>(
+  loader: () => Promise<T>,
+  deps: any[] = [],
+): {
   data: T | null;
   loading: boolean;
   reload: () => void;
