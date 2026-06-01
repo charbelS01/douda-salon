@@ -29,8 +29,8 @@ export function H2({ children, style }: { children: React.ReactNode; style?: Sty
 export function H3({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text style={[styles.h3, style]}>{children}</Text>;
 }
-export function Body({ children, style, muted }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
-  return <Text style={[styles.body, muted && { color: theme.colors.textMuted }, style]}>{children}</Text>;
+export function Body({ children, style, muted, numberOfLines }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; numberOfLines?: number }) {
+  return <Text numberOfLines={numberOfLines} style={[styles.body, muted && { color: theme.colors.textMuted }, style]}>{children}</Text>;
 }
 
 export function Field({
@@ -96,6 +96,72 @@ export function Button({
 
 export function Row({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>{children}</View>;
+}
+
+export function ConfirmModal({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel,
+  destructive,
+}: {
+  visible: boolean;
+  title: string;
+  message?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    visible ? (
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: theme.spacing.lg,
+          zIndex: 1000,
+        } as any}
+      >
+        <View
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+          pointerEvents="none"
+        />
+        <View
+          style={{
+            backgroundColor: theme.colors.card,
+            borderRadius: theme.radius.lg,
+            padding: theme.spacing.lg,
+            width: '100%',
+            maxWidth: 420,
+            ...theme.shadow.card,
+          }}
+        >
+          <Text style={styles.h2}>{title}</Text>
+          {message ? (
+            <Text style={[styles.body, { color: theme.colors.textMuted, marginBottom: theme.spacing.md }]}>
+              {message}
+            </Text>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Button title={cancelLabel} variant="ghost" onPress={onCancel} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button title={confirmLabel} variant={destructive ? 'danger' : 'primary'} onPress={onConfirm} />
+            </View>
+          </View>
+        </View>
+      </View>
+    ) : null
+  );
 }
 
 export function Pill({ label }: { label: string }) {

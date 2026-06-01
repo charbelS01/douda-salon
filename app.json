@@ -28,8 +28,27 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "name": "Douda Salon",
+      "shortName": "Douda",
+      "themeColor": "#B5476B",
+      "backgroundColor": "#FFF7F3",
+      "description": "Douda Salon management app"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f4cbebce-be47-4922-83d5-8a23f43ac820"
+      }
+    }
   }
 }

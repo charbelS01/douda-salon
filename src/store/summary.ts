@@ -26,18 +26,19 @@ export function summarizeDay(allLogs: WorkLog[], day: Date): DailySummary {
 
   todays.forEach((l) => {
     const mins = Math.max(0, differenceInMinutes(parseISO(l.endISO), parseISO(l.startISO)));
+    const paid = l.amountPaid ?? l.servicePrice;
     totalMinutes += mins;
-    totalIncome += l.servicePrice;
+    totalIncome += paid;
     const cur = svcMap.get(l.serviceId) ?? { name: l.serviceName, count: 0, revenue: 0 };
     cur.count += 1;
-    cur.revenue += l.servicePrice;
+    cur.revenue += paid;
     svcMap.set(l.serviceId, cur);
   });
 
-  // Per employee
   const empMap = new Map<string, DailySummary['perEmployee'][number]>();
   todays.forEach((l) => {
     const mins = Math.max(0, differenceInMinutes(parseISO(l.endISO), parseISO(l.startISO)));
+    const paid = l.amountPaid ?? l.servicePrice;
     const cur =
       empMap.get(l.employeeId) ??
       {
@@ -49,13 +50,13 @@ export function summarizeDay(allLogs: WorkLog[], day: Date): DailySummary {
         logs: [] as WorkLog[],
       };
     cur.minutes += mins;
-    cur.earnings += l.servicePrice;
+    cur.earnings += paid;
     cur.logs.push(l);
     const sIdx = cur.services.findIndex((s) => s.name === l.serviceName);
-    if (sIdx === -1) cur.services.push({ name: l.serviceName, count: 1, revenue: l.servicePrice });
+    if (sIdx === -1) cur.services.push({ name: l.serviceName, count: 1, revenue: paid });
     else {
       cur.services[sIdx].count += 1;
-      cur.services[sIdx].revenue += l.servicePrice;
+      cur.services[sIdx].revenue += paid;
     }
     empMap.set(l.employeeId, cur);
   });

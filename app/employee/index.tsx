@@ -1,33 +1,28 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { format } from 'date-fns';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Body, Button, Card, Field, H2, Pill, Row, Screen } from '../../src/components/UI';
 import {
   addLog,
+  getCategories,
   getServices,
   getSession,
 } from '../../src/store/store';
-import { Service, Session } from '../../src/types';
+import { PaymentMethod, Service, ServiceCategory, Session } from '../../src/types';
 import { theme } from '../../src/theme';
-
-function combine(date: Date, time: Date): Date {
-  const d = new Date(date);
-  d.setHours(time.getHours(), time.getMinutes(), 0, 0);
-  return d;
-}
 
 export default function LogClient() {
   const [session, setSessionState] = useState<Session | null>(null);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [clientName, setClientName] = useState('');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
-  const today = new Date();
-  const [start, setStart] = useState<Date>(new Date(today.getTime() - 60 * 60 * 1000));
-  const [end, setEnd] = useState<Date>(today);
-  const [picker, setPicker] = useState<null | 'start' | 'end'>(null);
+  const [amountPaid, setAmountPaid] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [colorCode, setColorCode] = useState('');
+  const [otherNotes, setOtherNotes] = useState('');
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
@@ -37,6 +32,7 @@ export default function LogClient() {
       return;
     }
     setSessionState(s);
+    setCategories(await getCategories());
     setServices(await getServices());
   }, []);
 
@@ -46,32 +42,52 @@ export default function LogClient() {
     }, [reload])
   );
 
+  const selectedCategory = categories.find((c) => c.id === categoryId) ?? null;
+  const filteredServices = services.filter((s) => s.categoryId === categoryId);
+  const selectedService = services.find((s) => s.id === serviceId) ?? null;
+  const isNailRelated = selectedCategory?.isNailRelated ?? false;
+  const isOther = selectedCategory?.id === 'cat_other';
+
   useEffect(() => {
-    if (services.length && !serviceId) setServiceId(services[0].id);
-  }, [services, serviceId]);
+    setServiceId(null);
+    setColorCode('');
+    setOtherNotes('');
+  }, [categoryId]);
 
   async function submit() {
     if (!session?.employeeId) return;
     if (!clientName.trim()) return Alert.alert('Please enter the client name');
-    if (!serviceId) return Alert.alert('Please pick a service');
-    if (end <= start) return Alert.alert('End time must be after start time');
-    const svc = services.find((s) => s.id === serviceId);
-    if (!svc) return;
+    if (!categoryId || !selectedCategory) return Alert.alert('Please select a category');
+    if (!serviceId || !selectedService) return Alert.alert('Please pick a service');
+    const paid = Number(amountPaid);
+    if (!amountPaid.trim() || !Number.isFinite(paid) || paid < 0) return Alert.alert('Please enter a valid amount paid');
 
+    const now = new Date();
+    const start = new Date(now.getTime() - 60 * 60 * 1000);
     setBusy(true);
     try {
       await addLog({
         employeeId: session.employeeId,
         employeeName: session.employeeName ?? 'Unknown',
         clientName: clientName.trim(),
-        serviceId: svc.id,
-        serviceName: svc.name,
-        servicePrice: svc.price,
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        servicePrice: selectedService.price,
+        amountPaid: paid,
+        paymentMethod,
+        colorCode: isNailRelated && colorCode.trim() ? colorCode.trim() : undefined,
+        notes: isOther && otherNotes.trim() ? otherNotes.trim() : undefined,
+        categoryId: selectedCategory.id,
+        categoryName: selectedCategory.name,
         startISO: start.toISOString(),
-        endISO: end.toISOString(),
+        endISO: now.toISOString(),
       });
       setClientName('');
-      Alert.alert('Saved', `${svc.name} for ${clientName.trim()} logged.`);
+      setAmountPaid('');
+      setPaymentMethod('cash');
+      setColorCode('');
+      setOtherNotes('');
+      Alert.alert('Saved', `${selectedService.name} for ${clientName.trim()} logged.`);
     } finally {
       setBusy(false);
     }
@@ -83,18 +99,31 @@ export default function LogClient() {
         <Pill label={session?.employeeName ?? ''} />
         <View style={{ height: theme.spacing.md }} />
 
+        <Pressable onPress={() => router.push('/employee/schedule')}>
+          <Card>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <H2 style={{ marginBottom: 0 }}>My schedule today ›</H2>
+                <Body muted>See appointments the owner booked for you.</Body>
+              </View>
+            </Row>
+          </Card>
+        </Pressable>
+
         <Card>
           <H2>New entry</H2>
+
           <Field label="Client name" value={clientName} onChangeText={setClientName} placeholder="e.g. Marie" />
 
-          <Body style={{ marginBottom: theme.spacing.xs, fontWeight: '600' }}>Service</Body>
+          {/* Category selector */}
+          <Body style={{ marginBottom: theme.spacing.xs, fontWeight: '600' }}>Category</Body>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: theme.spacing.md }}>
-            {services.map((s) => {
-              const active = s.id === serviceId;
+            {categories.map((c) => {
+              const active = c.id === categoryId;
               return (
                 <Pressable
-                  key={s.id}
-                  onPress={() => setServiceId(s.id)}
+                  key={c.id}
+                  onPress={() => setCategoryId(c.id)}
                   style={{
                     paddingHorizontal: theme.spacing.md,
                     paddingVertical: theme.spacing.sm,
@@ -105,63 +134,106 @@ export default function LogClient() {
                   }}
                 >
                   <Body style={{ color: active ? '#fff' : theme.colors.text, fontWeight: '600' }}>
-                    {s.name} · ${s.price}
+                    {c.name}
                   </Body>
                 </Pressable>
               );
             })}
-            {services.length === 0 && <Body muted>No services yet — ask the owner to add some.</Body>}
           </View>
 
-          <Row style={{ gap: theme.spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Body style={{ fontWeight: '600', marginBottom: theme.spacing.xs }}>Start</Body>
-              <Pressable onPress={() => setPicker('start')} style={pickerBoxStyle}>
-                <Body>{format(start, 'EEE d MMM · HH:mm')}</Body>
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Body style={{ fontWeight: '600', marginBottom: theme.spacing.xs }}>End</Body>
-              <Pressable onPress={() => setPicker('end')} style={pickerBoxStyle}>
-                <Body>{format(end, 'EEE d MMM · HH:mm')}</Body>
-              </Pressable>
-            </View>
-          </Row>
+          {/* Service selector (no price shown) */}
+          {categoryId && (
+            <>
+              <Body style={{ marginBottom: theme.spacing.xs, fontWeight: '600' }}>Service</Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: theme.spacing.md }}>
+                {filteredServices.map((s) => {
+                  const active = s.id === serviceId;
+                  return (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => setServiceId(s.id)}
+                      style={{
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        borderRadius: 999,
+                        backgroundColor: active ? theme.colors.primary : theme.colors.bg,
+                        borderWidth: 1,
+                        borderColor: active ? theme.colors.primary : theme.colors.border,
+                      }}
+                    >
+                      <Body style={{ color: active ? '#fff' : theme.colors.text, fontWeight: '600' }}>
+                        {s.name}
+                      </Body>
+                    </Pressable>
+                  );
+                })}
+                {filteredServices.length === 0 && <Body muted>No services in this category.</Body>}
+              </View>
+            </>
+          )}
 
-          {picker && (
-            <DateTimePicker
-              value={picker === 'start' ? start : end}
-              mode="time"
-              is24Hour
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_, date) => {
-                if (Platform.OS !== 'ios') setPicker(null);
-                if (!date) return;
-                if (picker === 'start') setStart(combine(start, date));
-                else setEnd(combine(end, date));
-              }}
+          {/* Amount paid */}
+          <Field
+            label="Amount paid ($)"
+            value={amountPaid}
+            onChangeText={setAmountPaid}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+
+          {/* Payment method */}
+          <Body style={{ marginBottom: theme.spacing.xs, fontWeight: '600' }}>Payment method</Body>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: theme.spacing.md }}>
+            {(['cash', 'whish'] as PaymentMethod[]).map((m) => {
+              const active = m === paymentMethod;
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => setPaymentMethod(m)}
+                  style={{
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.sm,
+                    borderRadius: 999,
+                    backgroundColor: active ? theme.colors.primary : theme.colors.bg,
+                    borderWidth: 1,
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                  }}
+                >
+                  <Body style={{ color: active ? '#fff' : theme.colors.text, fontWeight: '600' }}>
+                    {m === 'cash' ? 'Cash' : 'Whish'}
+                  </Body>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Color code for nail services */}
+          {isNailRelated && (
+            <Field
+              label="Color code"
+              value={colorCode}
+              onChangeText={setColorCode}
+              placeholder="e.g. OPI #A16"
             />
           )}
-          {Platform.OS === 'ios' && picker && (
-            <Button title="Done" variant="ghost" onPress={() => setPicker(null)} />
+
+          {/* Notes for Other category */}
+          {isOther && (
+            <Field
+              label="Notes"
+              value={otherNotes}
+              onChangeText={setOtherNotes}
+              placeholder="Describe the service..."
+              multiline
+              numberOfLines={3}
+              style={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
           )}
 
           <View style={{ height: theme.spacing.lg }} />
           <Button title="Save entry" onPress={submit} loading={busy} />
         </Card>
 
-        <Link href="/employee/my-day" asChild>
-          <Pressable>
-            <Card>
-              <Row style={{ justifyContent: 'space-between' }}>
-                <View>
-                  <H2 style={{ marginBottom: 0 }}>My day →</H2>
-                  <Body muted>Review and remove entries you logged today.</Body>
-                </View>
-              </Row>
-            </Card>
-          </Pressable>
-        </Link>
       </ScrollView>
     </Screen>
   );

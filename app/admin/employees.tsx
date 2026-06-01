@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { Body, Button, Card, Field, H2, H3, Row, Screen } from '../../src/components/UI';
+import { Body, Button, Card, ConfirmModal, Field, H2, H3, Row, Screen } from '../../src/components/UI';
 import { addEmployee, deleteEmployee, getEmployees } from '../../src/store/store';
 import { Employee } from '../../src/types';
 import { theme } from '../../src/theme';
@@ -10,6 +10,7 @@ export default function Employees() {
   const [list, setList] = useState<Employee[]>([]);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<Employee | null>(null);
 
   const reload = useCallback(async () => {
     setList(await getEmployees());
@@ -32,19 +33,6 @@ export default function Employees() {
     reload();
   }
 
-  function confirmDelete(e: Employee) {
-    Alert.alert('Remove employee?', `Remove ${e.name}? Their past logs will remain.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteEmployee(e.id);
-          reload();
-        },
-      },
-    ]);
-  }
 
   return (
     <Screen>
@@ -79,10 +67,23 @@ export default function Employees() {
                 <H3 style={{ marginBottom: 0 }}>{item.name}</H3>
                 <Body muted>PIN: {'•'.repeat(item.pin.length)}</Body>
               </View>
-              <Button title="Remove" variant="danger" onPress={() => confirmDelete(item)} />
+              <Button title="Remove" variant="danger" onPress={() => setPendingDelete(item)} />
             </Row>
           </Card>
         )}
+      />
+      <ConfirmModal
+        visible={!!pendingDelete}
+        title="Remove employee?"
+        message={pendingDelete ? `Remove ${pendingDelete.name}? Their past logs will remain.` : ''}
+        confirmLabel="Remove"
+        destructive
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (pendingDelete) await deleteEmployee(pendingDelete.id);
+          setPendingDelete(null);
+          reload();
+        }}
       />
     </Screen>
   );

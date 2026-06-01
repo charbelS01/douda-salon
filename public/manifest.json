@@ -1,0 +1,18 @@
+{
+  "short_name": "Douda",
+  "name": "Douda Salon",
+  "description": "Douda Salon management app",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7F3",
+  "theme_color": "#B5476B",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

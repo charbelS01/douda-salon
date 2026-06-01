@@ -63,6 +63,7 @@ src/
 ## Adding the real services
 
 Once you give me the official list of services and prices, either:
+
 1. I'll bake them into `src/store/store.ts` (`DEFAULT_SERVICES`), **or**
 2. The owner adds them in-app from **Owner ▸ Services**.
 

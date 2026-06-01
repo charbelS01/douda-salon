@@ -18,14 +18,15 @@ export default function EmployeeLayout() {
               router.replace('/login');
             }}
             hitSlop={10}
+            style={{ marginRight: 16, paddingVertical: 8, paddingHorizontal: 12 }}
           >
-            <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>Sign out</Text>
+            <Text style={{ color: theme.colors.primary, fontWeight: '700', fontSize: 15 }}>Sign out</Text>
           </Pressable>
         ),
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Log a client' }} />
-      <Stack.Screen name="my-day" options={{ title: 'My day' }} />
+      <Stack.Screen name="schedule" options={{ title: 'My schedule' }} />
     </Stack>
   );
 }
